@@ -31,6 +31,7 @@ func main() {
 	router.Use(cors.Default())
 
 	router.GET("/api/v1/commands/:uuid", handler.GetCommand)
+	router.GET("/api/v1/commands", handler.GetCommands)
 	router.POST("/api/v1/commands", handler.CreateCommand)
 
 	router.Run(":8114")

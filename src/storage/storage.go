@@ -11,18 +11,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Command struct {
-	Id           int    `json:"id"`
-	Command_uuid string `json:"command_uuid"`
-	Description  string `json:"description"`
-	Script       string `json:"script"`
-	Status       string `json:"status"`
-	Output       string `json:"output"`
-}
-
 type Storage interface {
 	CreateCommand(ctx context.Context, command_uuid, description, script, status, output string) error
 	GetCommand(ctx context.Context, command_uuid string) (Command, error)
+	GetCommands(ctx context.Context, status string, limit int, offset int) ([]Command, error)
 }
 
 type postgres struct {
@@ -75,10 +67,9 @@ func (pg *postgres) CreateCommand(ctx context.Context, command_uuid, description
 func (pg *postgres) GetCommand(ctx context.Context, command_uuid string) (Command, error) {
 	query := fmt.Sprintf(`SELECT * FROM command WHERE command_uuid = '%s'`, command_uuid)
 
-	rows, err := pg.db.Query(ctx, query)
-
 	var command Command
 
+	rows, err := pg.db.Query(ctx, query)
 	if err != nil {
 		log.Printf("unable to query: %v", err)
 		return command, err
@@ -97,4 +88,38 @@ func (pg *postgres) GetCommand(ctx context.Context, command_uuid string) (Comman
 	}
 
 	return command, nil
+}
+
+func (pg *postgres) GetCommands(ctx context.Context, status string, limit int, offset int) ([]Command, error) {
+
+	condition := ""
+	if status != "" {
+		condition += fmt.Sprintf(`WHERE status = '%s'`, status)
+	}
+
+	query := fmt.Sprintf(`SELECT * FROM command %s ORDER BY id DESC `, condition)
+
+	if limit > 0 {
+		query += fmt.Sprintf(`LIMIT %d `, limit)
+	}
+	if offset > 0 {
+		query += fmt.Sprintf(`OFFSET %d `, offset)
+	}
+	query += `;`
+
+	var commands []Command
+
+	rows, err := pg.db.Query(ctx, query)
+	if err != nil {
+		return commands, fmt.Errorf("unable to query: %w", err)
+	}
+	defer rows.Close()
+
+	commands, err = pgx.CollectRows(rows, pgx.RowToStructByName[Command])
+	if err != nil {
+		log.Printf("CollectRows error: %v", err)
+		return commands, err
+	}
+
+	return commands, nil
 }

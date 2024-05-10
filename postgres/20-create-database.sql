@@ -32,9 +32,6 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO program;
 
 
 
-
-
-
 -- INSERT INTO banner (feature_id, content, is_active, created_at, updated_at) VALUES (3, '{ "title": "Alice", "text": "alice", "url": "alice.com"}', true, '2024-04-10T10:03:05', '2024-04-14T12:03:05');
 -- INSERT INTO banner_tag VALUES (2, 1);
 
