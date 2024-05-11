@@ -1,12 +1,12 @@
-package storage
+package types
 
 import (
-	"os"
+	"os/exec"
 	"sync"
 )
 
 type ActiveProcess struct {
-	Process *os.Process
+	Cmd *exec.Cmd
 }
 
 type ActiveProcesses struct {
@@ -20,9 +20,9 @@ func NewActiveProcesses() *ActiveProcesses {
 	}
 }
 
-func (ap *ActiveProcesses) Add(id string, process *os.Process) {
+func (ap *ActiveProcesses) Add(id string, cmd *exec.Cmd) {
 	command := &ActiveProcess{
-		Process: process,
+		Cmd: cmd,
 	}
 	ap.Lock()
 	ap.m[id] = command

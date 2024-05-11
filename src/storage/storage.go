@@ -15,6 +15,7 @@ type Storage interface {
 	CreateCommand(ctx context.Context, command_uuid, description, script, status, output string) error
 	GetCommand(ctx context.Context, command_uuid string) (Command, error)
 	GetCommands(ctx context.Context, status string, limit int, offset int) ([]Command, error)
+	UpdateCommandStatus(ctx context.Context, command_uuid string, status string) error
 }
 
 type postgres struct {
@@ -79,7 +80,7 @@ func (pg *postgres) GetCommand(ctx context.Context, command_uuid string) (Comman
 	command, err = pgx.CollectOneRow(rows, pgx.RowToStructByName[Command])
 
 	if errors.Is(err, pgx.ErrNoRows) {
-		return command, errors.New("banner not found")
+		return command, errors.New("command not found")
 	}
 
 	if err != nil {
@@ -122,4 +123,15 @@ func (pg *postgres) GetCommands(ctx context.Context, status string, limit int, o
 	}
 
 	return commands, nil
+}
+
+func (pg *postgres) UpdateCommandStatus(ctx context.Context, command_uuid string, status string) error {
+	query := fmt.Sprintf(`UPDATE command SET status = '%s' WHERE command_uuid = '%s'`, status, command_uuid)
+
+	_, err := pg.db.Exec(ctx, query)
+	if err != nil {
+		return fmt.Errorf("unable to insert row: %w", err)
+	}
+
+	return nil
 }

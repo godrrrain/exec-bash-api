@@ -6,6 +6,7 @@ import (
 
 	"github.com/godrrrain/exec-bash-api/src/handler"
 	"github.com/godrrrain/exec-bash-api/src/storage"
+	"github.com/godrrrain/exec-bash-api/src/types"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -22,7 +23,7 @@ func main() {
 	}
 	defer psqlDB.Close()
 
-	aprocesses := storage.NewActiveProcesses()
+	aprocesses := types.NewActiveProcesses()
 
 	handler := handler.NewHandler(psqlDB, aprocesses)
 
@@ -33,6 +34,7 @@ func main() {
 	router.GET("/api/v1/commands/:uuid", handler.GetCommand)
 	router.GET("/api/v1/commands", handler.GetCommands)
 	router.POST("/api/v1/commands", handler.CreateCommand)
+	router.PATCH("/api/v1/commands/:uuid", handler.StopCommand)
 
 	router.Run(":8114")
 }
