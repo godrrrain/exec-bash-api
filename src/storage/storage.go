@@ -16,6 +16,7 @@ type Storage interface {
 	GetCommand(ctx context.Context, command_uuid string) (Command, error)
 	GetCommands(ctx context.Context, status string, limit int, offset int) ([]Command, error)
 	UpdateCommandStatus(ctx context.Context, command_uuid string, status string) error
+	UpdateCommandOutput(ctx context.Context, command_uuid string, output string) error
 }
 
 type postgres struct {
@@ -127,6 +128,17 @@ func (pg *postgres) GetCommands(ctx context.Context, status string, limit int, o
 
 func (pg *postgres) UpdateCommandStatus(ctx context.Context, command_uuid string, status string) error {
 	query := fmt.Sprintf(`UPDATE command SET status = '%s' WHERE command_uuid = '%s'`, status, command_uuid)
+
+	_, err := pg.db.Exec(ctx, query)
+	if err != nil {
+		return fmt.Errorf("unable to insert row: %w", err)
+	}
+
+	return nil
+}
+
+func (pg *postgres) UpdateCommandOutput(ctx context.Context, command_uuid string, output string) error {
+	query := fmt.Sprintf(`UPDATE command SET output = '%s' WHERE command_uuid = '%s'`, output, command_uuid)
 
 	_, err := pg.db.Exec(ctx, query)
 	if err != nil {

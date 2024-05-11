@@ -34,6 +34,7 @@ func main() {
 	router.GET("/api/v1/commands/:uuid", handler.GetCommand)
 	router.GET("/api/v1/commands", handler.GetCommands)
 	router.POST("/api/v1/commands", handler.CreateCommand)
+	router.POST("/api/v1/durables/commands", handler.CreateDurableCommand)
 	router.PATCH("/api/v1/commands/:uuid", handler.StopCommand)
 
 	router.Run(":8114")

@@ -1,12 +1,15 @@
 package handler
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os/exec"
 	"strconv"
+	"sync"
 
 	"github.com/godrrrain/exec-bash-api/src/storage"
 	"github.com/godrrrain/exec-bash-api/src/types"
@@ -34,9 +37,7 @@ func (h *Handler) CreateCommand(c *gin.Context) {
 	err := json.NewDecoder(c.Request.Body).Decode(&reqCommand)
 	if err != nil {
 		log.Printf("failed to decode body %s\n", err.Error())
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Invalid body",
-		})
+		c.JSON(http.StatusBadRequest, NewErrorResponse("Invalid body"))
 		return
 	}
 
@@ -47,14 +48,15 @@ func (h *Handler) CreateCommand(c *gin.Context) {
 
 	cmd := exec.Command("/bin/sh", "-c", reqCommand.Script)
 	h.aprocesses.Add(commandUuid, cmd)
-	// err = h.storage.CreateCommand(context.Background(), reqCommand.Description, reqCommand.Script, status, output)
-	// if err != nil {
-	// 	log.Printf("failed to create banner %s\n", err.Error())
-	// 	c.JSON(http.StatusInternalServerError, ErrorResponse{
-	// 		Error: err.Error(),
-	// 	})
-	// 	return
-	// }
+
+	defaultOutput := ""
+
+	err = h.storage.CreateCommand(context.Background(), commandUuid, reqCommand.Description, reqCommand.Script, status, defaultOutput)
+	if err != nil {
+		log.Printf("failed to create command %s\n", err.Error())
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(err.Error()))
+		return
+	}
 
 	go func() {
 		output, err := cmd.CombinedOutput()
@@ -62,15 +64,22 @@ func (h *Handler) CreateCommand(c *gin.Context) {
 		if err != nil {
 			log.Printf("script execution error %s\n", err.Error())
 			status = "FAILED"
+
+			if err.Error() == "signal: killed" {
+				status = "STOPPED"
+			}
 		}
 
 		h.aprocesses.Delete(commandUuid)
 
-		log.Println(string(output))
-
-		err = h.storage.CreateCommand(context.Background(), commandUuid, reqCommand.Description, reqCommand.Script, status, string(output))
+		err = h.storage.UpdateCommandOutput(context.Background(), commandUuid, string(output))
 		if err != nil {
-			log.Printf("failed to create command %s\n", err.Error())
+			log.Println(err.Error())
+		}
+
+		err = h.storage.UpdateCommandStatus(context.Background(), commandUuid, status)
+		if err != nil {
+			log.Println(err.Error())
 		}
 	}()
 
@@ -95,9 +104,7 @@ func (h *Handler) GetCommand(c *gin.Context) {
 			return
 		}
 		log.Printf("failed to get command: %s\n", err.Error())
-		c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: err.Error(),
-		})
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(err.Error()))
 		return
 	}
 
@@ -115,9 +122,7 @@ func (h *Handler) GetCommands(c *gin.Context) {
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
 		log.Printf("invalid limit query %s\n", err.Error())
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "Invalid limit query",
-		})
+		c.JSON(http.StatusBadRequest, NewErrorResponse("Invalid limit query"))
 		return
 	}
 
@@ -128,9 +133,7 @@ func (h *Handler) GetCommands(c *gin.Context) {
 	offset, err := strconv.Atoi(offsetStr)
 	if err != nil {
 		log.Printf("invalid offset query %s\n", err.Error())
-		c.JSON(http.StatusBadRequest, ErrorResponse{
-			Error: "invalid offset query",
-		})
+		c.JSON(http.StatusBadRequest, NewErrorResponse("invalid offset query"))
 		return
 	}
 
@@ -139,9 +142,7 @@ func (h *Handler) GetCommands(c *gin.Context) {
 	commands, err := h.storage.GetCommands(context.Background(), status, limit, offset)
 	if err != nil {
 		log.Printf("failed to get commands %s\n", err.Error())
-		c.JSON(http.StatusInternalServerError, ErrorResponse{
-			Error: err.Error(),
-		})
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(err.Error()))
 		return
 	}
 
@@ -149,9 +150,9 @@ func (h *Handler) GetCommands(c *gin.Context) {
 }
 
 func (h *Handler) StopCommand(c *gin.Context) {
-	command_uuid := c.Param("uuid")
+	commandUuid := c.Param("uuid")
 
-	aprocess, ok := h.aprocesses.Load(command_uuid)
+	aprocess, ok := h.aprocesses.Load(commandUuid)
 	if !ok {
 		c.Status(http.StatusNotFound)
 		return
@@ -160,30 +161,116 @@ func (h *Handler) StopCommand(c *gin.Context) {
 	if aprocess.Cmd.Process != nil {
 		err := aprocess.Cmd.Process.Kill()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, ErrorResponse{
-				Error: "error while stopping command",
-			})
+			c.JSON(http.StatusInternalServerError, NewErrorResponse("error while stopping command"))
 			return
 		}
 	}
 
-	h.aprocesses.Delete(command_uuid)
+	h.aprocesses.Delete(commandUuid)
 
-	// err := h.storage.UpdateCommandStatus(context.Background(), command_uuid, "STOPPED")
-	// if err != nil {
-	// 	if err.Error() == "command not found" {
-	// 		log.Println(err.Error())
-	// 		c.Status(http.StatusNotFound)
-	// 		return
-	// 	}
-	// 	log.Printf("failed to get command: %s\n", err.Error())
-	// 	c.JSON(http.StatusInternalServerError, ErrorResponse{
-	// 		Error: err.Error(),
-	// 	})
-	// 	return
-	// }
+	c.JSON(http.StatusOK, NewMessageResponse("command stopped successfully"))
+}
 
-	c.JSON(http.StatusOK, MessageResponse{
-		Message: "command stopped successfully",
+func (h *Handler) CreateDurableCommand(c *gin.Context) {
+
+	var reqCommand CreateCommandRequest
+
+	err := json.NewDecoder(c.Request.Body).Decode(&reqCommand)
+	if err != nil {
+		log.Printf("failed to decode body %s\n", err.Error())
+		c.JSON(http.StatusBadRequest, NewErrorResponse("Invalid body"))
+		return
+	}
+
+	uid := uuid.New()
+
+	commandUuid := uid.String()
+	status := "EXECUTING"
+
+	cmd := exec.Command("/bin/sh", "-c", reqCommand.Script)
+	h.aprocesses.Add(commandUuid, cmd)
+
+	defaultOutput := ""
+
+	err = h.storage.CreateCommand(context.Background(), commandUuid, reqCommand.Description, reqCommand.Script, status, defaultOutput)
+	if err != nil {
+		log.Printf("failed to create banner %s\n", err.Error())
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(err.Error()))
+		return
+	}
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse("error while creating pipe for stdout"))
+		return
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse("error while creating pipe for stderr"))
+		return
+	}
+
+	if err := cmd.Start(); err != nil {
+		c.JSON(http.StatusInternalServerError, NewErrorResponse("error while starting command"))
+		return
+	}
+
+	var buffer bytes.Buffer
+	var mutex sync.Mutex
+	var tempOutput string
+
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			mutex.Lock()
+			buffer.WriteString(scanner.Text() + "\n")
+			tempOutput = buffer.String()
+			mutex.Unlock()
+
+			err = h.storage.UpdateCommandOutput(context.Background(), commandUuid, tempOutput)
+			if err != nil {
+				log.Println(err.Error())
+			}
+		}
+	}()
+
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			mutex.Lock()
+			buffer.WriteString("ERROR: " + scanner.Text() + "\n")
+			tempOutput = buffer.String()
+			mutex.Unlock()
+
+			err = h.storage.UpdateCommandOutput(context.Background(), commandUuid, tempOutput)
+			if err != nil {
+				log.Println(err.Error())
+			}
+		}
+	}()
+
+	go func() {
+		err := cmd.Wait()
+		status = "EXECUTED"
+		if err != nil {
+			log.Printf("script execution error: %s\n", err)
+			status = "FAILED"
+
+			if err.Error() == "signal: killed" {
+				status = "STOPPED"
+			}
+		}
+
+		h.aprocesses.Delete(commandUuid)
+
+		err = h.storage.UpdateCommandStatus(context.Background(), commandUuid, status)
+		if err != nil {
+			log.Println(err.Error())
+		}
+	}()
+
+	c.JSON(http.StatusCreated, CreateCommandResponse{
+		Uuid: commandUuid,
 	})
 }

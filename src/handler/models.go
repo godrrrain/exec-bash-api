@@ -35,6 +35,18 @@ func IsValidUUID(u string) bool {
 	return err == nil
 }
 
+func NewErrorResponse(err string) ErrorResponse {
+	return ErrorResponse{
+		Error: err,
+	}
+}
+
+func NewMessageResponse(message string) MessageResponse {
+	return MessageResponse{
+		Message: message,
+	}
+}
+
 func CommandToResponse(command storage.Command) CommandResponse {
 	return CommandResponse{
 		Command_uuid: command.Command_uuid,
