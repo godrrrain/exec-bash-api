@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 
+	"github.com/godrrrain/exec-bash-api/src/config"
 	"github.com/godrrrain/exec-bash-api/src/handler"
 	"github.com/godrrrain/exec-bash-api/src/storage"
 	"github.com/godrrrain/exec-bash-api/src/types"
@@ -13,8 +15,13 @@ import (
 )
 
 func main() {
+	cfg, err := config.ReadConfig()
+	if err != nil {
+		log.Printf("Error while reading config: %v. Set default values", err)
+	}
+
 	postgresURL := fmt.Sprintf("host=%s port=%d user=%s dbname=%s password=%s",
-		"localhost", 5432, "postgres", "postgres", "postgres")
+		cfg.Database.Host, cfg.Database.Port, cfg.Database.User, cfg.Database.Dbname, cfg.Database.Password)
 	psqlDB, err := storage.NewPgStorage(context.Background(), postgresURL)
 	if err != nil {
 		fmt.Printf("Postgresql init: %s", err)
@@ -37,5 +44,5 @@ func main() {
 	router.POST("/api/v1/durables/commands", handler.CreateDurableCommand)
 	router.PATCH("/api/v1/commands/:uuid", handler.StopCommand)
 
-	router.Run(":8114")
+	router.Run(fmt.Sprintf(":%d", cfg.Server.Port))
 }
