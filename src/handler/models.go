@@ -15,7 +15,7 @@ type MessageResponse struct {
 
 type CreateCommandRequest struct {
 	Description string `json:"description"`
-	Script      string `json:"script"`
+	Script      string `json:"script" binding:"required"`
 }
 
 type CreateCommandResponse struct {
