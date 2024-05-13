@@ -1,0 +1,455 @@
+{
+	"info": {
+		"_postman_id": "577594aa-fbc5-44a3-b4bc-31c2696c0717",
+		"name": "[pgstart] Script Execution System",
+		"description": "Коллекция реализована для тестирования сервиса в рамках CI/CD.\n\nДля некоторых запросов в Pre-request скриптах прописаны таум-ауты для более корректной проверки выполнения команд.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "26740752"
+	},
+	"item": [
+		{
+			"name": "Command API",
+			"item": [
+				{
+					"name": "Запустить команду",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Запустить команду\", () => {\r",
+									"    pm.response.to.have.status(201)\r",
+									"\r",
+									"    const response = pm.response.json();\r",
+									"    pm.collectionVariables.set(\"command_usual_uuid\", response.uuid)\r",
+									"})"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"description\" : \"Тест успешной команды\",\r\n  \"script\": \"echo Test\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{baseUrl}}/api/v1/commands"
+					},
+					"response": []
+				},
+				{
+					"name": "Получить вывод и статус команды",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"setTimeout(() => {}, \"1000\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Получить вывод и статус команды\", () => {\r",
+									"    pm.response.to.have.status(200)\r",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.contains(\"application/json\");\r",
+									"\r",
+									"    const response = pm.response.json();\r",
+									"    pm.expect(response.status).to.be.eq(\"EXECUTED\")\r",
+									"    pm.expect(response.output).to.be.eq(\"Test\\n\")\r",
+									"})"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/v1/commands/{{command_usual_uuid}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Запустить долгую команду",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Запустить долгую команду\", () => {\r",
+									"    pm.response.to.have.status(201)\r",
+									"\r",
+									"    const response = pm.response.json();\r",
+									"    pm.collectionVariables.set(\"command_durable_uuid\", response.uuid)\r",
+									"})"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"description\" : \"Тест долгой команды\",\r\n  \"script\": \"for i in $(seq 1 5); do echo Test; sleep 3; done\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{baseUrl}}/api/v1/durables/commands"
+					},
+					"response": []
+				},
+				{
+					"name": "Проверить запись вывода в БД во время выполнения долгой команды",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"setTimeout(() => {}, \"4000\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Проверить запись вывода в БД во время выполнения долгой команды\", () => {\r",
+									"    pm.response.to.have.status(200)\r",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.contains(\"application/json\");\r",
+									"\r",
+									"    const response = pm.response.json();\r",
+									"    pm.expect(response.status).to.be.eq(\"EXECUTING\")\r",
+									"    pm.expect(response.output).to.be.eq(\"Test\\nTest\\n\")\r",
+									"})"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/v1/commands/{{command_durable_uuid}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Остановить выполнение команды",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Остановить выполнение команды\", () => {\r",
+									"    pm.response.to.have.status(200)\r",
+									"})"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"setTimeout(() => {}, \"3000\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": "{{baseUrl}}/api/v1/commands/{{command_durable_uuid}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Проверить остановку команды",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"setTimeout(() => {}, \"1000\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Проверить остановку команды\", () => {\r",
+									"    pm.response.to.have.status(200)\r",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.contains(\"application/json\");\r",
+									"\r",
+									"    const response = pm.response.json();\r",
+									"    pm.expect(response.status).to.be.eq(\"STOPPED\")\r",
+									"})"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/v1/commands/{{command_durable_uuid}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Запустить провальную команду",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Запустить провальную команду\", () => {\r",
+									"    pm.response.to.have.status(201)\r",
+									"\r",
+									"    const response = pm.response.json();\r",
+									"    pm.collectionVariables.set(\"command_fail_uuid\", response.uuid)\r",
+									"})"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"description\" : \"Тест успешной команды\",\r\n  \"script\": \"echo; done\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{baseUrl}}/api/v1/commands"
+					},
+					"response": []
+				},
+				{
+					"name": "Получить вывод и статус провальной команды",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"setTimeout(() => {}, \"1000\");"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Получить вывод и статус команды\", () => {\r",
+									"    pm.response.to.have.status(200)\r",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.contains(\"application/json\");\r",
+									"\r",
+									"    const response = pm.response.json();\r",
+									"    pm.expect(response.status).to.be.eq(\"FAILED\")\r",
+									"})"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{baseUrl}}/api/v1/commands/{{command_fail_uuid}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Получить список команд",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Получить список команд\", () => {\r",
+									"    pm.response.to.have.status(200)\r",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.contains(\"application/json\");\r",
+									"\r",
+									"    const response = pm.response.json();\r",
+									"    pm.expect(response).to.be.an(\"array\");\r",
+									"    pm.expect(response.length).to.be.above(2);\r",
+									"})"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "http://localhost:8080/api/v1/commands"
+					},
+					"response": []
+				},
+				{
+					"name": "Удалить команду",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Удалить команду\", () => {\r",
+									"    pm.response.to.have.status(204)\r",
+									"})"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": "{{baseUrl}}/api/v1/commands/{{command_usual_uuid}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Удалить долгую команду",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Удалить долгую команду\", () => {\r",
+									"    pm.response.to.have.status(204)\r",
+									"})"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": "{{baseUrl}}/api/v1/commands/{{command_durable_uuid}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Удалить провальную команду",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Удалить провальную команду\", () => {\r",
+									"    pm.response.to.have.status(204)\r",
+									"})"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": "{{baseUrl}}/api/v1/commands/{{command_fail_uuid}}"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "command_usual_uuid",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "command_durable_uuid",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "command_fail_uuid",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
