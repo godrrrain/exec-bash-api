@@ -45,5 +45,7 @@ func main() {
 	router.PATCH("/api/v1/commands/:uuid", handler.StopCommand)
 	router.DELETE("/api/v1/commands/:uuid", handler.DeleteCommand)
 
+	router.GET("/manage/health", handler.GetHealth)
+
 	router.Run(fmt.Sprintf(":%d", cfg.Server.Port))
 }

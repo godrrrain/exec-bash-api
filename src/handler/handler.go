@@ -307,3 +307,7 @@ func (h *Handler) CreateDurableCommand(c *gin.Context) {
 		Uuid: commandUuid,
 	})
 }
+
+func (h *Handler) GetHealth(c *gin.Context) {
+	c.Status(http.StatusOK)
+}
