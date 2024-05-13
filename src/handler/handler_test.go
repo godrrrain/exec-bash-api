@@ -27,7 +27,7 @@ func TestHandler_CreateCommand(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	if w.Code != 201 {
-		t.Errorf("Unexpected status code, expected %d, got %d instead", 201, w.Code)
+		t.Errorf("Test ok. Unexpected status code, expected %d, got %d instead", 201, w.Code)
 	}
 }
 
@@ -45,7 +45,7 @@ func TestHandler_GetCommand(t *testing.T) {
 
 	r.ServeHTTP(w, req)
 	if w.Code != 200 {
-		t.Errorf("Unexpected status code, expected %d, got %d instead", 200, w.Code)
+		t.Errorf("Test ok. Unexpected status code, expected %d, got %d instead", 200, w.Code)
 	}
 
 	// command not found
@@ -55,7 +55,7 @@ func TestHandler_GetCommand(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	if w.Code != 404 {
-		t.Errorf("Unexpected status code, expected %d, got %d instead", 404, w.Code)
+		t.Errorf("Test command not found. Unexpected status code, expected %d, got %d instead", 404, w.Code)
 	}
 
 	// incorrect uuid
@@ -65,7 +65,7 @@ func TestHandler_GetCommand(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	if w.Code != 404 {
-		t.Errorf("Unexpected status code, expected %d, got %d instead", 404, w.Code)
+		t.Errorf("Test incorrect uuid. Unexpected status code, expected %d, got %d instead", 404, w.Code)
 	}
 }
 
@@ -83,7 +83,7 @@ func TestHandler_GetCommands(t *testing.T) {
 
 	r.ServeHTTP(w, req)
 	if w.Code != 200 {
-		t.Errorf("Unexpected status code, expected %d, got %d instead", 200, w.Code)
+		t.Errorf("Test ok. Unexpected status code, expected %d, got %d instead", 200, w.Code)
 	}
 
 	// ok with parametrs
@@ -93,7 +93,7 @@ func TestHandler_GetCommands(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	if w.Code != 200 {
-		t.Errorf("Unexpected status code, expected %d, got %d instead", 200, w.Code)
+		t.Errorf("Test ok with parametrs. Unexpected status code, expected %d, got %d instead", 200, w.Code)
 	}
 
 	// incorrect limit
@@ -103,7 +103,7 @@ func TestHandler_GetCommands(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	if w.Code != 400 {
-		t.Errorf("Unexpected status code, expected %d, got %d instead", 400, w.Code)
+		t.Errorf("Test incorrect limit. Unexpected status code, expected %d, got %d instead", 400, w.Code)
 	}
 
 	// incorrect offset
@@ -113,6 +113,6 @@ func TestHandler_GetCommands(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	if w.Code != 400 {
-		t.Errorf("Unexpected status code, expected %d, got %d instead", 400, w.Code)
+		t.Errorf("Test incorrect offset. Unexpected status code, expected %d, got %d instead", 400, w.Code)
 	}
 }
