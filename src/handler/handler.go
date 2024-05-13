@@ -37,7 +37,12 @@ func (h *Handler) CreateCommand(c *gin.Context) {
 	err := json.NewDecoder(c.Request.Body).Decode(&reqCommand)
 	if err != nil {
 		log.Printf("failed to decode body %s\n", err.Error())
-		c.JSON(http.StatusBadRequest, NewErrorResponse("Invalid body"))
+		c.JSON(http.StatusBadRequest, NewErrorResponse("invalid body"))
+		return
+	}
+
+	if reqCommand.Script == "" {
+		c.JSON(http.StatusBadRequest, NewErrorResponse("script must be given"))
 		return
 	}
 
@@ -122,7 +127,7 @@ func (h *Handler) GetCommands(c *gin.Context) {
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
 		log.Printf("invalid limit query %s\n", err.Error())
-		c.JSON(http.StatusBadRequest, NewErrorResponse("Invalid limit query"))
+		c.JSON(http.StatusBadRequest, NewErrorResponse("invalid limit query"))
 		return
 	}
 
@@ -201,7 +206,12 @@ func (h *Handler) CreateDurableCommand(c *gin.Context) {
 	err := json.NewDecoder(c.Request.Body).Decode(&reqCommand)
 	if err != nil {
 		log.Printf("failed to decode body %s\n", err.Error())
-		c.JSON(http.StatusBadRequest, NewErrorResponse("Invalid body"))
+		c.JSON(http.StatusBadRequest, NewErrorResponse("invalid body"))
+		return
+	}
+
+	if reqCommand.Script == "" {
+		c.JSON(http.StatusBadRequest, NewErrorResponse("script must be given"))
 		return
 	}
 
