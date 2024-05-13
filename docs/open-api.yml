@@ -1,0 +1,248 @@
+openapi: 3.0.0
+info:
+  title: Command API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/v1/commands:
+    post:
+      summary: Создание обычной команды
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommandRequest'
+      responses:
+        '201':
+          description: Команда успешно создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCommandResponse'
+        '400':
+          description: Ошибка валидации данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Ошибка обработки запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      summary: Получение списка команд
+      parameters:
+        - in: query
+          name: status
+          required: false
+          description: Статус команд (EXECUTING, EXECUTED, STOPPED, FAILED)
+          schema:
+            type: string
+        - in: query
+          name: limit
+          required: false
+          description: Количество элементов
+          schema:
+            type: integer
+        - in: query
+          name: offset
+          required: false
+          description: Сдвиг
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Список команд
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResponse'
+        '400':
+          description: Ошибка валидации данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Ошибка обработки запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/commands/{uuid}:
+    get:
+      summary: Получение информации о команде по UUID
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Информация о команде
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommandResponse'
+        '404':
+          description: Команда не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Ошибка обработки запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      summary: Удаление команды по UUID
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Команда успешно удалена
+        '404':
+          description: Команда не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Ошибка обработки запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      summary: Остановка команды по UUID
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Команда успешно остановлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '404':
+          description: Команда не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Ошибка обработки запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /api/v1/durables/commands:
+    post:
+      summary: Создание долгой команды
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDurableCommandRequest'
+      responses:
+        '201':
+          description: Команда успешно создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateCommandResponse'
+        '400':
+          description: Ошибка валидации данных
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Ошибка обработки запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /manage/health:
+    get:
+      summary: Проверка состояния сервера
+      responses:
+        '200':
+          description: Сервер работает нормально
+          content: {}
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Информация об ошибке
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Сообщение с информацией
+    CreateCommandRequest:
+      type: object
+      properties:
+        description:
+          type: string
+          example: Тест успешной команды
+          description: Описание команды
+        script:
+          type: string
+          description: Bash-скрипт
+          example: echo Test
+    CreateDurableCommandRequest:
+      type: object
+      properties:
+        description:
+          type: string
+          example: Тест долгой команды
+          description: Описание команды
+        script:
+          type: string
+          description: Bash-скрипт
+          example: for i in $(seq 1 5); do echo Test; sleep 3; done
+    CreateCommandResponse:
+      type: object
+      properties:
+        uuid:
+          type: string
+          description: Uuid созданной команды
+    CommandResponse:
+      type: object
+      properties:
+        command_uuid:
+          type: string
+          description: Uuid команды
+        description:
+          type: string
+          description: Описание команды
+        script:
+          type: string
+          description: Bash-скрипт
+        status:
+          type: string
+          description: Статус команды
+        output:
+          type: string
+          description: Вывод команды
