@@ -196,7 +196,7 @@ func (h *Handler) DeleteCommand(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusNoContent, NewMessageResponse("command deleted successfully"))
+	c.Status(http.StatusNoContent)
 }
 
 func (h *Handler) CreateDurableCommand(c *gin.Context) {
