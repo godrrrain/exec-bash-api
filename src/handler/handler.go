@@ -171,6 +171,29 @@ func (h *Handler) StopCommand(c *gin.Context) {
 	c.JSON(http.StatusOK, NewMessageResponse("command stopped successfully"))
 }
 
+func (h *Handler) DeleteCommand(c *gin.Context) {
+	command_uuid := c.Param("uuid")
+
+	if !IsValidUUID(command_uuid) {
+		c.Status(http.StatusNotFound)
+		return
+	}
+
+	err := h.storage.DeleteCommand(context.Background(), command_uuid)
+	if err != nil {
+		if err.Error() == "command not found" {
+			log.Println(err.Error())
+			c.Status(http.StatusNotFound)
+			return
+		}
+		log.Printf("failed to delete command: %s\n", err.Error())
+		c.JSON(http.StatusInternalServerError, NewErrorResponse(err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusNoContent, NewMessageResponse("command deleted successfully"))
+}
+
 func (h *Handler) CreateDurableCommand(c *gin.Context) {
 
 	var reqCommand CreateCommandRequest

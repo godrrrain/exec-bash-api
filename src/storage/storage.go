@@ -17,6 +17,7 @@ type Storage interface {
 	GetCommands(ctx context.Context, status string, limit int, offset int) ([]Command, error)
 	UpdateCommandStatus(ctx context.Context, command_uuid string, status string) error
 	UpdateCommandOutput(ctx context.Context, command_uuid string, output string) error
+	DeleteCommand(ctx context.Context, command_uuid string) error
 }
 
 type postgres struct {
@@ -143,6 +144,22 @@ func (pg *postgres) UpdateCommandOutput(ctx context.Context, command_uuid string
 	_, err := pg.db.Exec(ctx, query)
 	if err != nil {
 		return fmt.Errorf("unable to insert row: %w", err)
+	}
+
+	return nil
+}
+
+func (pg *postgres) DeleteCommand(ctx context.Context, command_uuid string) error {
+
+	query := fmt.Sprintf(`DELETE FROM command WHERE command_uuid = '%s'`, command_uuid)
+	res, err := pg.db.Exec(ctx, query)
+	if err != nil {
+		return fmt.Errorf("unable to delete command: %w", err)
+	}
+
+	rowsAffected := res.RowsAffected()
+	if rowsAffected == 0 {
+		return errors.New("command not found")
 	}
 
 	return nil

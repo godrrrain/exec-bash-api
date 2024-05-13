@@ -43,6 +43,7 @@ func main() {
 	router.POST("/api/v1/commands", handler.CreateCommand)
 	router.POST("/api/v1/durables/commands", handler.CreateDurableCommand)
 	router.PATCH("/api/v1/commands/:uuid", handler.StopCommand)
+	router.DELETE("/api/v1/commands/:uuid", handler.DeleteCommand)
 
 	router.Run(fmt.Sprintf(":%d", cfg.Server.Port))
 }

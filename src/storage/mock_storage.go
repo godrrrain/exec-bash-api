@@ -127,3 +127,20 @@ func (ms *mockStorage) UpdateCommandOutput(ctx context.Context, command_uuid str
 
 	return nil
 }
+
+func (ms *mockStorage) DeleteCommand(ctx context.Context, command_uuid string) error {
+	isFinded := false
+	for i := 0; i < len(ms.commands); i++ {
+		if ms.commands[i].Command_uuid == command_uuid {
+			ms.commands = append(ms.commands[:i], ms.commands[i+1:]...)
+			isFinded = true
+			break
+		}
+	}
+
+	if !isFinded {
+		return errors.New("command not found")
+	}
+
+	return nil
+}
